@@ -1,0 +1,5 @@
+{
+    "Físico": ["Força", "Destreza", "Vigor"],
+    "Social": ["Carisma", "Manipulação", "Autocontrole"],
+    "Mental": ["Inteligência", "Raciocínio", "Perseverança"]
+}

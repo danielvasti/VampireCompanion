@@ -1,0 +1,14 @@
+{
+    "Talentos": [
+        "Atuação", "Briga", "Consciência", "Empatia", "Esportes", 
+        "Expressão", "Intimidação", "Liderança", "Manha", "Prontidão"
+    ],
+    "Perícias": [
+        "Armas de Fogo", "Armas Brancas", "Condução", "Furtividade", 
+        "Ofícios", "Performance", "Sobrevivência", "Trato com Animais"
+    ],
+    "Conhecimentos": [
+        "Acadêmicos", "Ciências", "Finanças", "Investigação", 
+        "Medicina", "Ocultismo", "Política", "Tecnologia"
+    ]
+}

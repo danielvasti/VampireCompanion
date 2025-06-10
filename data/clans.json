@@ -1,0 +1,54 @@
+{
+  "Brujah": {
+    "disciplines": ["Celeridade", "Potência", "Presença"],
+    "bane": "A fúria nunca está longe. A dificuldade de testes para resistir à fúria para um Brujah é aumentada em 2."
+  },
+  "Toreador": {
+    "disciplines": ["Auspícios", "Celeridade", "Presença"],
+    "bane": "Quando em um ambiente de notável beleza (a critério do Narrador), você deve fazer um teste de Autocontrole ou ficará extasiado por uma cena."
+  },
+  "Ventrue": {
+    "disciplines": ["Dominação", "Fortitude", "Presença"],
+    "bane": "Possui um gosto restrito para alimentação. Ao se alimentar fora de sua preferência, não reduz a Fome a menos que passe em um teste de Humanidade."
+  },
+  "Gangrel": {
+    "disciplines": ["Animalismo", "Metamorfose", "Fortitude"],
+    "bane": "Quando a Fome aumenta para 5 ou em situações de estresse extremo, características animais se manifestam permanentemente (a critério do Narrador)."
+  },
+  "Malkavian": {
+    "disciplines": ["Auspícios", "Dominação", "Ofuscação"],
+    "bane": "Você possui uma desvantagem mental única (delírio, paranoia, alucinações, etc.), que pode se manifestar a qualquer momento."
+  },
+  "Nosferatu": {
+    "disciplines": ["Animalismo", "Ofuscação", "Potência"],
+    "bane": "Sua aparência é tão horripilante que não pode passar despercebida entre mortais. Testes sociais com humanos são mais difíceis."
+  },
+  "Tremere": {
+    "disciplines": ["Sanguinus", "Dominação", "Auspícios"],
+    "bane": "Você não pode beber sangue de outro vampiro sem sofrer dano Agravado (exceto em rituais Thaumaturgicos)."
+  },
+  "Lasombra": {
+    "disciplines": ["Dominação", "Potência", "Obtenebração"],
+    "bane": "Você não projeta reflexo algum (nem em espelhos, fotos ou câmeras digitais)."
+  },
+  "Tzimisce": {
+    "disciplines": ["Animalismo", "Dominação", "Vicissitude"],
+    "bane": "Você deve dormir em solo de sua terra natal ou sofrerá penalidades em testes até se alimentar novamente."
+  },
+  "Assamita": {
+    "disciplines": ["Celeridade", "Ofuscação", "Quietus"],
+    "bane": "Você não pode se alimentar de sangue de mortais sem antes drená-los completamente (a menos que quebre sua maldição)."
+  },
+  "Ravnos": {
+    "disciplines": ["Animalismo", "Ofuscação", "Quimerismo"],
+    "bane": "Você tem um vício incontrolável (mentir, roubar, apostar, etc.). Quando resiste a ele, sofre penalidades."
+  },
+  "Setita": {
+    "disciplines": ["Ofuscação", "Presença", "Serpentis"],
+    "bane": "Você é vulnerável à luz solar e sofre dano adicional quando exposto."
+  },
+  "Hecata": {
+    "disciplines": ["Auspex", "Fortitude", "Oblívion"],
+    "bane": "Você é amaldiçoado com uma aura de morte, dificultando interações sociais com mortais não-acostumados."
+  }
+}
