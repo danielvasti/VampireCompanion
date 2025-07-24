@@ -1,7 +1,5 @@
-# src/gui.py
-
 import tkinter as tk
-from tkinter import ttk, font as tkfont, messagebox, Toplevel
+from tkinter import ttk, font as tkfont, messagebox, Toplevel 
 import json
 from character import Character
 import sv_ttk
@@ -20,8 +18,8 @@ class App(tk.Tk):
 
         sv_ttk.set_theme("dark")
 
-        # --- Carregar Todos os Dados ---
         self.MANDATORY_SPECIALTY_SKILLS = ["Acadêmicos", "Ofícios", "Performance", "Ciências"]
+
         self.clans_data = load_game_data('data/clans.json')
         self.attributes_data = load_game_data('data/attributes.json')
         self.skills_data = load_game_data('data/skills.json')
@@ -41,43 +39,136 @@ class App(tk.Tk):
         self.skill_widgets = {}
 
         self.title("Vampire: The Masquerade Companion")
-        self.geometry("850x700")
-        self.title_font = tkfont.Font(family='Garamond', size=16, weight="bold")
-        self.normal_font = tkfont.Font(family='Garamond', size=12)
+        self.geometry("900x800") # Aumentamos um pouco a janela
+
+        try:
+            self.iconbitmap("assets/icon.ico")
+        except tk.TclError:
+            print("Ícone 'assets/icon.ico' não encontrado.")
+
+        self.title_font = tkfont.Font(family='Garamond', size=18, weight="bold")
+        self.normal_font = tkfont.Font(family='Segoe UI', size=11)
         self.category_font = tkfont.Font(family='Garamond', size=14, weight="bold", slant="italic")
 
-        notebook = ttk.Notebook(self)
-        notebook.pack(pady=10, padx=10, fill="both", expand=True)
-        main_tab, attr_tab, skills_tab = ttk.Frame(notebook), ttk.Frame(notebook), ttk.Frame(notebook)
-        notebook.add(main_tab, text='Ficha Principal'); notebook.add(attr_tab, text='Atributos'); notebook.add(skills_tab, text='Perícias')
+        # --- ESTRUTURA PRINCIPAL COM ROLAGEM ---
+        # 1. Cria o Canvas principal que conterá tudo
+        main_canvas = tk.Canvas(self, highlightthickness=0)
+        main_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        self._create_main_tab(main_tab)
-        self._create_attribute_tab(attr_tab)
-        self._create_skill_tab(skills_tab)
+        # 2. Adiciona a Scrollbar e a conecta ao Canvas
+        scrollbar = ttk.Scrollbar(self, orient="vertical", command=main_canvas.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        main_canvas.configure(yscrollcommand=scrollbar.set)
 
-    def _create_main_tab(self, parent_tab):
-        # (Esta função permanece idêntica)
-        input_frame = ttk.Frame(parent_tab); input_frame.pack(pady=10, padx=10, fill="x")
-        output_frame = ttk.Frame(parent_tab); output_frame.pack(pady=10, padx=10, fill="both", expand=True)
-        ttk.Label(input_frame, text="Nome:", font=self.normal_font).grid(row=0, column=0, sticky="w", padx=5)
-        self.name_entry = ttk.Entry(input_frame, font=self.normal_font, width=30); self.name_entry.grid(row=0, column=1, sticky="w", padx=5)
-        ttk.Label(input_frame, text="Clã:", font=self.normal_font).grid(row=0, column=2, sticky="w", padx=5)
+        # 3. Cria o Frame rolável DENTRO do Canvas
+        self.scrollable_frame = ttk.Frame(main_canvas)
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: main_canvas.configure(scrollregion=main_canvas.bbox("all"))
+        )
+
+        # 4. Coloca o frame rolável dentro da janela do Canvas
+        main_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+
+        # --- SEÇÕES DA PÁGINA ÚNICA ---
+        # Agora criamos as seções (LabelFrames) e as populamos
+        self._create_basic_info_section()
+        ttk.Separator(self.scrollable_frame, orient='horizontal').pack(fill='x', padx=20, pady=15)
+        self._create_attributes_section()
+        ttk.Separator(self.scrollable_frame, orient='horizontal').pack(fill='x', padx=20, pady=15)
+        self._create_skills_section()
+        ttk.Separator(self.scrollable_frame, orient='horizontal').pack(fill='x', padx=20, pady=15)
+        self._create_final_sheet_section()
+
+    def _create_basic_info_section(self):
+        """Cria a seção de informações básicas do personagem."""
+        info_frame = ttk.LabelFrame(self.scrollable_frame, text="Informações Básicas", labelwidget=ttk.Label(text="Informações Básicas", font=self.title_font), padding=15)
+        info_frame.pack(fill="x", padx=20, pady=10)
+        
+        ttk.Label(info_frame, text="Nome:", font=self.normal_font).grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        self.name_entry = ttk.Entry(info_frame, font=self.normal_font, width=40)
+        self.name_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
+        
+        ttk.Label(info_frame, text="Clã:", font=self.normal_font).grid(row=1, column=0, sticky="w", padx=5, pady=5)
         self.selected_clan = tk.StringVar(self)
         if self.clan_list: self.selected_clan.set(self.clan_list[0])
-        clan_menu = ttk.OptionMenu(input_frame, self.selected_clan, self.clan_list[0], *self.clan_list); clan_menu.config(width=15); clan_menu.grid(row=0, column=3, sticky="w", padx=5)
-        create_button = ttk.Button(input_frame, text="Gerar Ficha", command=self.generate_sheet); create_button.grid(row=0, column=4, padx=20)
-        self.output_text = tk.Text(output_frame, font=("Courier New", 10), wrap="word", state="disabled"); self.output_text.pack(fill="both", expand=True)
+        clan_menu = ttk.OptionMenu(info_frame, self.selected_clan, self.clan_list[0], *self.clan_list)
+        clan_menu.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
+        info_frame.grid_columnconfigure(1, weight=1)
 
-    # --- LÓGICA DE ATRIBUTOS ---
-    def _create_attribute_tab(self, parent_tab):
-        header_frame = ttk.Frame(parent_tab); header_frame.pack(fill="x", pady=5, padx=10)
-        self.attribute_instruction_label = ttk.Label(header_frame, text="Passo 1: Escolha seu Atributo Primário (4 pontos)", font=self.title_font); self.attribute_instruction_label.pack(side="left")
-        reset_button = ttk.Button(header_frame, text="Resetar Atributos", command=self.reset_attributes); reset_button.pack(side="right", padx=5)
+    def _create_attributes_section(self):
+        """Cria a seção de Atributos."""
+        attr_frame = ttk.LabelFrame(self.scrollable_frame, text="Atributos", labelwidget=ttk.Label(text="Atributos", font=self.title_font), padding=15)
+        attr_frame.pack(fill="x", expand=True, padx=20, pady=10)
+        
+        # A lógica interna de criação dos atributos é a mesma, só muda o frame "pai"
+        self._populate_attribute_frame(attr_frame)
+
+    def _create_skills_section(self):
+        """Cria a seção de Perícias."""
+        skills_frame = ttk.LabelFrame(self.scrollable_frame, text="Perícias", labelwidget=ttk.Label(text="Perícias", font=self.title_font), padding=15)
+        skills_frame.pack(fill="x", expand=True, padx=20, pady=10)
+
+        # A lógica interna de criação das perícias é a mesma, só muda o frame "pai"
+        self._populate_skill_frame(skills_frame)
+
+    def _create_final_sheet_section(self):
+        """Cria a seção final com o botão de gerar e a área de texto."""
+        final_frame = ttk.LabelFrame(self.scrollable_frame, text="Ficha Final", labelwidget=ttk.Label(text="Ficha Final", font=self.title_font), padding=15)
+        final_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        create_button = ttk.Button(final_frame, text="Gerar Ficha e Escolher Especialidades", command=self.generate_sheet)
+        create_button.pack(pady=(0, 15))
+        
+        self.output_text = tk.Text(final_frame, font=("Courier New", 10), wrap="word", state="disabled", height=25)
+        self.output_text.pack(fill="both", expand=True)
+
+    # FUNÇÕES ADAPTADAS (anteriormente criavam abas, agora populam frames)
+    def _populate_attribute_frame(self, parent_frame):
+        header_frame = ttk.Frame(parent_frame); header_frame.pack(fill="x", pady=5)
+        self.attribute_instruction_label = ttk.Label(header_frame, text="Passo 1: Escolha seu Atributo Primário (4 pontos)", font=self.category_font); self.attribute_instruction_label.pack(side="left")
+        reset_button = ttk.Button(header_frame, text="Resetar", command=self.reset_attributes); reset_button.pack(side="right", padx=5)
         self.confirm_attr_button = ttk.Button(header_frame, text="Confirmar Passo", command=self.confirm_attribute_step); self.confirm_attr_button.pack(side="right")
-        content_frame = ttk.Frame(parent_tab); content_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        content_frame = ttk.Frame(parent_frame); content_frame.pack(fill="both", expand=True, pady=10)
+        
+        # Dividindo em 3 colunas
+        phys_frame = ttk.Frame(content_frame); phys_frame.grid(row=0, column=0, sticky="ns", padx=10)
+        soc_frame = ttk.Frame(content_frame); soc_frame.grid(row=0, column=1, sticky="ns", padx=10)
+        ment_frame = ttk.Frame(content_frame); ment_frame.grid(row=0, column=2, sticky="ns", padx=10)
+        content_frame.grid_columnconfigure((0,1,2), weight=1)
+
+        frames_by_cat = {"Físico": phys_frame, "Social": soc_frame, "Mental": ment_frame}
+
         for category, stats in self.attributes_data.items():
-            cat_frame = ttk.LabelFrame(content_frame, text=category, labelwidget=ttk.Label(content_frame, text=category, font=self.category_font)); cat_frame.pack(fill="x", padx=10, pady=10, ipady=5)
-            for stat in stats: self._create_attribute_row(cat_frame, stat)
+            parent = frames_by_cat[category]
+            ttk.Label(parent, text=category, font=self.normal_font, style="Bold.TLabel").pack(pady=(0,5))
+            for stat in stats: self._create_attribute_row(parent, stat)
+
+    def _populate_skill_frame(self, parent_frame):
+        header_frame = ttk.Frame(parent_frame); header_frame.pack(fill="x", pady=5)
+        self.skill_instruction_label = ttk.Label(header_frame, text="Passo 1: Escolha 3 Perícias (3 pontos)", font=self.category_font); self.skill_instruction_label.pack(side="left")
+        reset_button = ttk.Button(header_frame, text="Resetar", command=self.reset_skills); reset_button.pack(side="right", padx=5)
+        self.confirm_skill_button = ttk.Button(header_frame, text="Confirmar Passo", command=self.confirm_skill_step); self.confirm_skill_button.pack(side="right")
+        
+        content_frame = ttk.Frame(parent_frame); content_frame.pack(fill="both", expand=True, pady=10)
+
+        # Dividindo em 3 colunas
+        tal_frame = ttk.Frame(content_frame); tal_frame.grid(row=0, column=0, sticky="ns", padx=10)
+        per_frame = ttk.Frame(content_frame); per_frame.grid(row=0, column=1, sticky="ns", padx=10)
+        con_frame = ttk.Frame(content_frame); con_frame.grid(row=0, column=2, sticky="ns", padx=10)
+        content_frame.grid_columnconfigure((0,1,2), weight=1)
+        
+        frames_by_cat = {"Talentos": tal_frame, "Perícias": per_frame, "Conhecimentos": con_frame}
+
+        for category, skills in self.skills_data.items():
+            parent = frames_by_cat[category]
+            ttk.Label(parent, text=category, font=self.normal_font, style="Bold.TLabel").pack(pady=(0,5))
+            for skill in skills:
+                var = tk.BooleanVar()
+                self._create_skill_row(parent, skill, var, command=self._update_skill_locks)
+                self.selected_skills_by_value[3][skill] = var
+                
     def _create_attribute_row(self, parent, stat_name):
         row_frame = ttk.Frame(parent); row_frame.pack(fill="x", padx=15, pady=2)
         selector = ttk.Radiobutton(row_frame, text=stat_name, variable=self.selected_primary_attr, value=stat_name); selector.pack(side="left")
