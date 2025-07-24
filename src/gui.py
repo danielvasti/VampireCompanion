@@ -50,28 +50,36 @@ class App(tk.Tk):
         self.normal_font = tkfont.Font(family='Segoe UI', size=11)
         self.category_font = tkfont.Font(family='Garamond', size=14, weight="bold", slant="italic")
 
-        # --- ESTRUTURA PRINCIPAL COM ROLAGEM ---
-        # 1. Cria o Canvas principal que conterá tudo
-        main_canvas = tk.Canvas(self, highlightthickness=0)
-        main_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # --- ESTRUTURA PRINCIPAL COM ROLAGEM (VERSÃO CORRIGIDA) ---
+        # 1. Cria o Canvas principal e o atribui a 'self'
+        self.main_canvas = tk.Canvas(self, highlightthickness=0)
 
-        # 2. Adiciona a Scrollbar e a conecta ao Canvas
-        scrollbar = ttk.Scrollbar(self, orient="vertical", command=main_canvas.yview)
+        # 2. Cria a Scrollbar, agora usando o self.main_canvas que já existe
+        scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.main_canvas.yview)
+
+        # 3. Posiciona os widgets na tela na ordem correta
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        main_canvas.configure(yscrollcommand=scrollbar.set)
+        self.main_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # 3. Cria o Frame rolável DENTRO do Canvas
-        self.scrollable_frame = ttk.Frame(main_canvas)
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: main_canvas.configure(scrollregion=main_canvas.bbox("all"))
-        )
+        # 4. Configura o canvas para usar a scrollbar
+        self.main_canvas.configure(yscrollcommand=scrollbar.set)
 
-        # 4. Coloca o frame rolável dentro da janela do Canvas
-        main_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        # 5. Cria o frame rolável DENTRO do canvas
+        self.scrollable_frame = ttk.Frame(self.main_canvas)
+        self.canvas_window = self.main_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
 
-        # --- SEÇÕES DA PÁGINA ÚNICA ---
-        # Agora criamos as seções (LabelFrames) e as populamos
+        # 6. Adiciona os "binds" para a responsividade (agora precisam de funções dedicadas)
+        self.main_canvas.bind("<Configure>", self._on_canvas_configure)
+        self.scrollable_frame.bind("<Configure>", self._on_frame_configure)
+
+        # 7. SCROLL DO MOUSE
+        # Este bind funciona para Windows e macOS
+        self.main_canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+        # Este bind funciona para Linux
+        self.main_canvas.bind_all("<Button-4>", self._on_mousewheel)
+        self.main_canvas.bind_all("<Button-5>", self._on_mousewheel)
+
+# --- SEÇÕES DA PÁGINA ÚNICA ---
         self._create_basic_info_section()
         ttk.Separator(self.scrollable_frame, orient='horizontal').pack(fill='x', padx=20, pady=15)
         self._create_attributes_section()
@@ -96,7 +104,24 @@ class App(tk.Tk):
         clan_menu.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
         info_frame.grid_columnconfigure(1, weight=1)
 
+    def _on_mousewheel(self, event):
+        """Permite a rolagem com a rodinha do mouse (cross-platform)."""
+        # Para Windows e macOS
+        if event.num == 5 or event.delta == -120:
+            delta = 1 
+        if event.num == 4 or event.delta == 120:
+            delta = -1
         
+        self.main_canvas.yview_scroll(delta, "units")
+
+    def _on_canvas_configure(self, event):
+        """Ajusta a largura do frame rolável para corresponder à largura do canvas."""
+        canvas_width = event.width
+        self.main_canvas.itemconfig(self.canvas_window, width=canvas_width)
+
+    def _on_frame_configure(self, event):
+        """Atualiza a região de rolagem para abranger todo o frame interno."""
+        self.main_canvas.configure(scrollregion=self.main_canvas.bbox("all"))
 
     def _create_attributes_section(self):
         """Cria a seção de Atributos."""
