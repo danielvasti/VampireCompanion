@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import ttk, font as tkfont, messagebox, Toplevel
 import json
 from character import Character
+import sv_ttk
 
 def load_game_data(file_path):
     try:
@@ -16,6 +17,8 @@ def load_game_data(file_path):
 class App(tk.Tk):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        sv_ttk.set_theme("dark")
 
         # --- Carregar Todos os Dados ---
         self.MANDATORY_SPECIALTY_SKILLS = ["Acadêmicos", "Ofícios", "Performance", "Ciências"]
