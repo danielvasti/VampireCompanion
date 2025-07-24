@@ -96,6 +96,8 @@ class App(tk.Tk):
         clan_menu.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
         info_frame.grid_columnconfigure(1, weight=1)
 
+        
+
     def _create_attributes_section(self):
         """Cria a seção de Atributos."""
         attr_frame = ttk.LabelFrame(self.scrollable_frame, text="Atributos", labelwidget=ttk.Label(text="Atributos", font=self.title_font), padding=15)
@@ -168,7 +170,7 @@ class App(tk.Tk):
                 var = tk.BooleanVar()
                 self._create_skill_row(parent, skill, var, command=self._update_skill_locks)
                 self.selected_skills_by_value[3][skill] = var
-                
+
     def _create_attribute_row(self, parent, stat_name):
         row_frame = ttk.Frame(parent); row_frame.pack(fill="x", padx=15, pady=2)
         selector = ttk.Radiobutton(row_frame, text=stat_name, variable=self.selected_primary_attr, value=stat_name); selector.pack(side="left")
