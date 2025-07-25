@@ -154,11 +154,26 @@ class App(ctk.CTk):
                 self.selected_skills_by_value[3][skill] = var
 
     def _create_attribute_row(self, parent, stat_name):
-        row_frame = ctk.CTkFrame(parent, fg_color="transparent"); row_frame.pack(fill="x", padx=15, pady=4)
-        selector = ctk.CTkRadioButton(row_frame, text=stat_name, variable=self.selected_primary_attr, value=stat_name, font=self.normal_font); selector.pack(side="left")
-        value_label = ctk.CTkLabel(row_frame, text="1", font=self.normal_font, width=30); value_label.pack(side="right", padx=10)
-        self.attribute_widgets[stat_name] = {'frame': row_frame, 'selector': selector, 'value_label': value_label}
+        row_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        row_frame.pack(fill="x", padx=15, pady=4)
 
+        selector = ctk.CTkRadioButton(
+            row_frame,
+            text=stat_name,
+            variable=self.selected_primary_attr,
+            value=stat_name,
+            font=self.normal_font,
+            
+            # --- PARÂMETROS NOVOS AQUI ---
+            fg_color=("#9A0000", "#700000"),  # Cor principal (vermelho escuro)
+            border_color="#500000",          # Cor da borda
+            hover_color="#B50000"            # Cor quando o mouse passa por cima
+    )
+    
+        selector.pack(side="left")
+        value_label = ctk.CTkLabel(row_frame, text="1", font=self.normal_font, width=30)
+        value_label.pack(side="right", padx=10)
+        self.attribute_widgets[stat_name] = {'frame': row_frame, 'selector': selector, 'value_label': value_label}
     def _create_skill_row(self, parent, skill_name, var, command):
         row_frame = ctk.CTkFrame(parent, fg_color="transparent"); row_frame.pack(fill="x", padx=15, pady=4)
         selector = ctk.CTkCheckBox(row_frame, text=skill_name, variable=var, font=self.normal_font, command=command); selector.pack(side="left")
