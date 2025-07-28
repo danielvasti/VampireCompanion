@@ -95,25 +95,54 @@ class App(ctk.CTk):
         info_grid = ctk.CTkFrame(header_frame, fg_color="transparent")
         info_grid.pack(pady=(0, 15), fill="x", padx=20)
         info_grid.grid_columnconfigure((0, 1, 2), weight=1)
-        left_col = ctk.CTkFrame(info_grid, fg_color="transparent"); mid_col = ctk.CTkFrame(info_grid, fg_color="transparent"); right_col = ctk.CTkFrame(info_grid, fg_color="transparent")
-        left_col.grid(row=0, column=0, sticky="nsew", padx=10); mid_col.grid(row=0, column=1, sticky="nsew", padx=10); right_col.grid(row=0, column=2, sticky="nsew", padx=10)
+        left_col = ctk.CTkFrame(info_grid, fg_color="transparent")
+        mid_col = ctk.CTkFrame(info_grid, fg_color="transparent")
+        right_col = ctk.CTkFrame(info_grid, fg_color="transparent")
+        left_col.grid(row=0, column=0, sticky="nsew", padx=10)
+        mid_col.grid(row=0, column=1, sticky="nsew", padx=10)
+        right_col.grid(row=0, column=2, sticky="nsew", padx=10)
+        
         left_fields = [("Nome do Personagem", "name_entry", 200), ("Crônica", "chronicle_entry", 200), ("Senhor", "sire_entry", 200)]
         mid_fields = [("Conceito", "concept_entry", 200), ("Ambição", "ambition_entry", 200), ("Desejo", "desire_entry", 200)]
         right_fields = [("Predador", "predator_entry", 200), ("Clã", "clan_menu", 200, self.clan_list), ("Jogador", "player_entry", 200)]
+
+        # A correção está dentro desta função auxiliar
         def populate_column(column_frame, fields_list):
             for i, (label, var_name, width, *options) in enumerate(fields_list):
-                field_frame = ctk.CTkFrame(column_frame, fg_color="transparent"); field_frame.pack(fill="x", pady=5)
+                field_frame = ctk.CTkFrame(column_frame, fg_color="transparent")
+                field_frame.pack(fill="x", pady=5)
                 ctk.CTkLabel(field_frame, text=label + ":", font=self.normal_font).pack(anchor="w")
+
                 if var_name.endswith("_entry"):
-                    entry = ctk.CTkEntry(field_frame, width=width, font=self.normal_font, border_color="#9A0000"); entry.pack(fill="x")
+                    entry = ctk.CTkEntry(field_frame, width=width, font=self.normal_font, border_color="#9A0000")
+                    entry.pack(fill="x")
                     setattr(self, var_name, entry)
+                
                 elif var_name.endswith("_menu"):
                     var = tk.StringVar()
-                    menu = ctk.CTkOptionMenu(field_frame, variable=var, values=options[0] if options else [], width=width, dropdown_fg_color="#1A1A1A", button_color="#9A0000", font=self.normal_font); menu.pack(fill="x")
+                    menu = ctk.CTkOptionMenu(
+                        field_frame, 
+                        variable=var, 
+                        values=options[0] if options else [], 
+                        width=width,
+                        dropdown_fg_color="#1A1A1A",
+                        button_color="#9A0000",
+                        font=self.normal_font
+                    )
+                    menu.pack(fill="x")
+                    
+                    # --- CORREÇÃO APLICADA AQUI ---
+                    # A linha foi movida para DENTRO do bloco 'elif'.
                     setattr(self, var_name.replace("_menu", "_var"), var)
-                    if options and options[0]: var.set(options[0][0])
-        populate_column(left_col, left_fields); populate_column(mid_col, mid_fields); populate_column(right_col, right_fields)
-    
+                    
+                    if options and options[0]: 
+                        var.set(options[0][0])
+                        
+        populate_column(left_col, left_fields)
+        populate_column(mid_col, mid_fields)
+        populate_column(right_col, right_fields)
+
+
     def _create_status_trackers_section(self):
         #frame principal da seção
         trackers_main_frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
