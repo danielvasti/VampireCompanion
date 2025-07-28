@@ -1,14 +1,15 @@
 {
-    "Talentos": [
-        "Atuação", "Briga", "Consciência", "Empatia", "Esportes", 
-        "Expressão", "Intimidação", "Liderança", "Manha", "Prontidão"
-    ],
     "Perícias": [
-        "Armas de Fogo", "Armas Brancas", "Condução", "Furtividade", 
-        "Ofícios", "Performance", "Sobrevivência", "Trato com Animais"
+        "Armas Brancas", "Armas de Fogo", "Atletismo", "Briga", 
+        "Condução", "Furtividade", "Ladroagem", "Ofícios","Sobrevivência"
+    ],
+    "Talentos": [
+        "Empatia com Animais", "Etiqueta", "Intimidação", "Liderança", "Manha", "Performance", "Persuasão", "Sagacidade",
+        "Subterfúgio"
+        
     ],
     "Conhecimentos": [
-        "Acadêmicos", "Ciências", "Finanças", "Investigação", 
-        "Medicina", "Ocultismo", "Política", "Tecnologia"
+        "Ciência", "Erudição", "Finanças", "Investigação",
+        "Medicina", "Ocultismo", "Percepção", "Política", "Tecnologia"
     ]
 }

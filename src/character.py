@@ -4,7 +4,7 @@ class Character:
     def __init__(self, name):
         self.name = name
         self.clan = None
-        self.disciplines = []
+        self.disciplines = {}
         self.bane = None
         
         self.attributes = {}

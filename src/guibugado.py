@@ -1,4 +1,6 @@
 # src/gui.py
+
+# Imports
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import messagebox
@@ -6,325 +8,377 @@ import json
 from character import Character
 
 def load_game_data(file_path):
-    """Carrega dados de um arquivo JSON."""
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
-        messagebox.showerror("Erro de Arquivo", f"Não foi possível carregar o arquivo: {file_path}\n\n{e}")
+        print(f"Erro ao carregar {file_path}: {e}")
         return None
 
-class DotSelector(ctk.CTkFrame):
-    """
-    Widget customizado para criar uma fileira de "bolinhas" (rádios) para seleção de pontos.
-    """
-    def __init__(self, master, total_dots=5, variable=None, command=None):
-        super().__init__(master, fg_color="transparent")
-        self.variable = variable if variable else tk.IntVar(value=0)
-        self.command = command
-        self.total_dots = total_dots
-        self.dots = []
+class App(ctk.CTk):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        for i in range(1, total_dots + 1):
-            dot = ctk.CTkRadioButton(
-                self,
-                text="",
-                variable=self.variable,
-                value=i,
-                width=18,
-                height=18,
-                border_width_unchecked=2,
-                border_width_checked=2,
-                fg_color=("#9A0000", "#700000"),
-                border_color=("#500000", "#500000"),
-                hover_color=("#B50000", "#B50000"),
-                command=self.on_select
-            )
-            dot.pack(side="left", padx=2)
-            self.dots.append(dot)
+        # Configurações de tema
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("blue")
 
-    def on_select(self):
-        if self.command:
-            self.command(self.variable.get())
-
-    def get(self):
-        return self.variable.get()
-
-    def set(self, value):
-        self.variable.set(value)
-
-    def configure_state(self, state="normal"):
-        """Habilita ou desabilita todos os botões."""
-        for dot in self.dots:
-            dot.configure(state=state)
-
-class CharacterSheet(ctk.CTkToplevel):
-    def __init__(self, master, character, clans_data, attributes_data, skills_data):
-        super().__init__(master)
-        self.title("Ficha de Personagem - Vampiro: A Máscara")
-        self.geometry("1100x850")
-        self.resizable(True, True)
-
-        self.character = character
-        self.clans_data = clans_data
-        self.attributes_data = attributes_data
-        self.skills_data = skills_data
+        # --- DADOS DO JOGO E DO PERSONAGEM ---
         self.MANDATORY_SPECIALTY_SKILLS = ["Acadêmicos", "Ofícios", "Performance", "Ciências"]
-
-        self.info_vars = {
-            "Nome": tk.StringVar(value=self.character.name),
-            "Jogador": tk.StringVar(), "Crônica": tk.StringVar(),
-            "Natureza": tk.StringVar(), "Comportamento": tk.StringVar(),
-            "Clã": tk.StringVar(value=self.character.clan or list(clans_data.keys())[0]),
-            "Geração": tk.StringVar(), "Senhor": tk.StringVar()
-        }
-        self.attribute_vars = {attr: tk.IntVar(value=self.character.attributes.get(attr, 1)) for cat in attributes_data.values() for attr in cat}
-        self.skill_vars = {skill: tk.IntVar(value=self.character.skills.get(skill, 0)) for cat in skills_data.values() for skill in cat}
-        
-        self.setup_ui()
-        self.bind_character_to_ui()
-
-    def setup_ui(self):
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-        self.create_header_frame(row=0)
-        self.create_main_content(row=1)
-        self.create_footer_frame(row=2)
-        self.create_action_buttons(row=3)
-
-    def bind_character_to_ui(self):
-        for key, var in self.info_vars.items():
-            def on_var_change(name, index, mode, k=key, v=var):
-                attr_name = 'name' if k == 'Nome' else k.lower()
-                setattr(self.character, attr_name, v.get())
-            var.trace_add("write", on_var_change)
-
-    def create_header_frame(self, row):
-        header_frame = ctk.CTkFrame(self, corner_radius=10)
-        header_frame.grid(row=row, column=0, columnspan=3, padx=10, pady=10, sticky="ew")
-        header_frame.grid_columnconfigure((1, 3, 5), weight=1)
-        fields = [
-            ("Nome", 0, 0), ("Jogador", 0, 2), ("Crônica", 0, 4),
-            ("Natureza", 1, 0), ("Comportamento", 1, 2), ("Clã", 1, 4),
-            ("Geração", 2, 0), ("Senhor", 2, 2)
-        ]
-        for label, r, c in fields:
-            ctk.CTkLabel(header_frame, text=f"{label}:").grid(row=r, column=c, padx=(10, 0), pady=5, sticky="w")
-            if label == "Clã":
-                widget = ctk.CTkOptionMenu(header_frame, variable=self.info_vars[label], values=list(self.clans_data.keys()))
-            else:
-                widget = ctk.CTkEntry(header_frame, textvariable=self.info_vars[label])
-            colspan = 3 if label == "Senhor" else 1
-            widget.grid(row=r, column=c+1, padx=(0, 10), pady=5, sticky="ew", columnspan=colspan)
-
-    def create_main_content(self, row):
-        main_frame = ctk.CTkFrame(self, fg_color="transparent")
-        main_frame.grid(row=row, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="nsew")
-        main_frame.grid_columnconfigure((0, 1, 2), weight=1)
-        main_frame.grid_rowconfigure(0, weight=1)
-        self.create_attributes_column(main_frame).grid(row=0, column=0, padx=(0, 5), sticky="nsew")
-        self.create_abilities_column(main_frame).grid(row=0, column=1, padx=5, sticky="nsew")
-        self.create_advantages_column(main_frame).grid(row=0, column=2, padx=(5, 0), sticky="nsew")
-        
-    def _create_column_frame(self, parent, title):
-        frame = ctk.CTkFrame(parent, corner_radius=10)
-        frame.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(frame, text=title, font=ctk.CTkFont(size=16, weight="bold")).grid(row=0, column=0, pady=10, padx=10, sticky="ew")
-        return frame
-
-    def create_attributes_column(self, parent):
-        frame = self._create_column_frame(parent, "Atributos")
-        # --- CORREÇÃO AQUI: Usando as chaves no SINGULAR ---
-        self._create_trait_category(frame, "Físicos", self.attributes_data['Físico'], self.attribute_vars, row=1)
-        self._create_trait_category(frame, "Sociais", self.attributes_data['Social'], self.attribute_vars, row=3)
-        self._create_trait_category(frame, "Mentais", self.attributes_data['Mental'], self.attribute_vars, row=5)
-        return frame
-
-    def create_abilities_column(self, parent):
-        frame = self._create_column_frame(parent, "Habilidades")
-        # As chaves de Habilidades geralmente estão no plural nos seus dados
-        self._create_trait_category(frame, "Talentos", self.skills_data['Talentos'], self.skill_vars, row=1)
-        self._create_trait_category(frame, "Perícias", self.skills_data['Perícias'], self.skill_vars, row=3)
-        self._create_trait_category(frame, "Conhecimentos", self.skills_data['Conhecimentos'], self.skill_vars, row=5)
-        return frame
-        
-    def create_advantages_column(self, parent):
-        frame = self._create_column_frame(parent, "Vantagens")
-        self._create_trait_category(frame, "Disciplinas", [""] * 3, {}, row=1, dots=0)
-        self._create_trait_category(frame, "Antecedentes", [""] * 5, {}, row=2, dots=0)
-        self._create_trait_category(frame, "Virtudes", ["Consciência", "Autocontrole", "Coragem"], {}, row=3, dots=5)
-        return frame
-
-    def _create_trait_category(self, parent_frame, title, items, var_dict, row, dots=5):
-        category_group_frame = ctk.CTkFrame(parent_frame, fg_color="transparent")
-        category_group_frame.grid(row=row, column=0, sticky="ew", pady=(0, 10))
-        category_group_frame.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(category_group_frame, text=title, font=ctk.CTkFont(size=13, weight="bold"), anchor="w").grid(row=0, column=0, sticky="ew", padx=20, pady=(0, 2))
-        items_frame = ctk.CTkFrame(category_group_frame, fg_color="transparent")
-        items_frame.grid(row=1, column=0, sticky="ew", padx=10)
-        items_frame.grid_columnconfigure(1, weight=1)
-        for i, item_name in enumerate(items):
-            display_name = item_name if item_name else "_____________"
-            label = ctk.CTkLabel(items_frame, text=display_name, anchor="w")
-            label.grid(row=i, column=0, sticky="w", padx=10)
-            if item_name and var_dict and dots > 0:
-                var = var_dict.get(item_name)
-                if var:
-                    selector = DotSelector(items_frame, total_dots=dots, variable=var)
-                    selector.grid(row=i, column=1, sticky="e", padx=(0, 10))
-                    selector.configure_state("disabled")
-
-    def create_footer_frame(self, row):
-        footer_frame = ctk.CTkFrame(self, fg_color="transparent")
-        footer_frame.grid(row=row, column=0, columnspan=3, padx=10, pady=(0, 10), sticky="ew")
-        footer_frame.grid_columnconfigure((0, 1), weight=1)
-        left_frame = ctk.CTkFrame(footer_frame, corner_radius=10)
-        left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
-        left_frame.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(left_frame, text="Qualidades e Defeitos", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, pady=5, padx=10, sticky="ew")
-        ctk.CTkTextbox(left_frame, height=80).grid(row=1, column=0, sticky="nsew", padx=10, pady=(0,10))
-        right_frame = ctk.CTkFrame(footer_frame, corner_radius=10)
-        right_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
-        right_frame.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(right_frame, text="Vitalidade", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, pady=5, padx=10, sticky="ew")
-        ctk.CTkTextbox(right_frame, height=80).grid(row=1, column=0, sticky="nsew", padx=10, pady=(0,10))
-
-    def create_action_buttons(self, row):
-        action_frame = ctk.CTkFrame(self, fg_color="transparent")
-        action_frame.grid(row=row, column=0, columnspan=3, padx=10, pady=10, sticky="e")
-        ctk.CTkButton(action_frame, text="Distribuir Pontos", command=self.open_distribution_window).pack(side="left", padx=5)
-        ctk.CTkButton(action_frame, text="Escolher Especialidades", command=self.open_specialty_window).pack(side="left", padx=5)
-        ctk.CTkButton(action_frame, text="Salvar Personagem", command=self.save_character).pack(side="right", padx=5)
-
-    def open_distribution_window(self):
-        messagebox.showinfo("Em Construção", "A janela para distribuição de pontos será implementada aqui.")
-
-    def open_specialty_window(self):
-        messagebox.showinfo("Em Construção", "A janela para escolha de especialidades será implementada aqui.")
-
-    def save_character(self):
-        self.update_character_from_ui()
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".json",
-            filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")],
-            title="Salvar Ficha de Personagem",
-            initialfile=f"{self.character.name or 'personagem'}.json"
-        )
-        if not file_path: return
-        try:
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(self.character.to_dict(), f, ensure_ascii=False, indent=4)
-            messagebox.showinfo("Sucesso", f"Personagem salvo em {file_path}", parent=self)
-        except Exception as e:
-            messagebox.showerror("Erro ao Salvar", f"Não foi possível salvar o arquivo.\n\n{e}", parent=self)
-
-    def update_character_from_ui(self):
-        for attr, var in self.attribute_vars.items():
-            self.character.attributes[attr] = var.get()
-        for skill, var in self.skill_vars.items():
-            self.character.skills[skill] = var.get()
-
-class App(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.title("Vampire Companion")
-        self.geometry("350x200")
-        ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")
-
         self.clans_data = load_game_data('data/clans.json')
         self.attributes_data = load_game_data('data/attributes.json')
         self.skills_data = load_game_data('data/skills.json')
-
-        if not all([self.clans_data, self.attributes_data, self.skills_data]):
-            self.after(100, self.destroy)
-            return
-
+        self.clan_list = list(self.clans_data.keys()) if self.clans_data else []
         self.character = Character("")
         self.character.initialize_stats(self.attributes_data, self.skills_data)
-
-        self.main_frame = ctk.CTkFrame(self)
-        self.main_frame.pack(padx=20, pady=20, fill="both", expand=True)
-        ctk.CTkButton(self.main_frame, text="Criar Novo Personagem", command=self.open_sheet).pack(pady=10, fill="x")
-        ctk.CTkButton(self.main_frame, text="Carregar Personagem", command=self.load_character).pack(pady=10, fill="x")
-        self.sheet_window = None
-
-    def open_sheet(self, char_data=None):
-        if self.sheet_window is None or not self.sheet_window.winfo_exists():
-            if char_data:
-                self.character.from_dict(char_data)
-            else:
-                self.character = Character("")
-                self.character.initialize_stats(self.attributes_data, self.skills_data)
-            self.sheet_window = CharacterSheet(self, self.character, self.clans_data, self.attributes_data, self.skills_data)
-            self.sheet_window.focus()
-        else:
-            self.sheet_window.focus()
-
-    def load_character(self):
-        file_path = filedialog.askopenfilename(filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")])
-        if not file_path: return
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            self.open_sheet(char_data=data)
-        except Exception as e:
-            messagebox.showerror("Erro ao Carregar", f"Não foi possível carregar o personagem.\n\n{e}")
-
-class App(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.title("Vampire Companion")
-        self.geometry("350x200")
-        ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")
-
-        self.clans_data = load_game_data('data/clans.json')
-        self.attributes_data = load_game_data('data/attributes.json')
-        self.skills_data = load_game_data('data/skills.json')
-
-        if not all([self.clans_data, self.attributes_data, self.skills_data]):
-            self.after(100, self.destroy)
-            return
-
-        self.character = Character("")
-        self.character.initialize_stats(self.attributes_data, self.skills_data)
-
-        self.main_frame = ctk.CTkFrame(self)
-        self.main_frame.pack(padx=20, pady=20, fill="both", expand=True)
-
-        ctk.CTkButton(self.main_frame, text="Criar Novo Personagem", command=self.open_sheet).pack(pady=10, fill="x")
-        ctk.CTkButton(self.main_frame, text="Carregar Personagem", command=self.load_character).pack(pady=10, fill="x")
         
-        self.sheet_window = None
+        # Variáveis de controle para a criação
+        self.attribute_selection_stage = 4
+        self.selected_primary_attr = tk.StringVar(value=None)
+        self.selected_secondary_attrs = {}
+        self.selected_tertiary_attrs = {}
+        self.attribute_widgets = {}
+        self.skill_selection_stage = 3
+        self.selected_skills_by_value = {3: {}, 2: {}, 1: {}}
+        self.skill_widgets = {}
 
-    def open_sheet(self, char_data=None):
-        if self.sheet_window is None or not self.sheet_window.winfo_exists():
-            if char_data:
-                # Assumindo que seu objeto character tem um método from_dict()
-                self.character.from_dict(char_data)
-            else:
-                self.character = Character("")
-                self.character.initialize_stats(self.attributes_data, self.skills_data)
+        # Variáveis para os medidores
+        self.health_tracker_states = []
+        self.willpower_tracker_states = []
+        self.health_tracker_buttons = []
+        self.willpower_tracker_buttons = []
+
+        # Configurações da Janela
+        self.title("Vampire: The Masquerade Companion")
+        self.geometry("950x850")
+
+        try:
+            self.iconbitmap("assets/icon.ico")
+        except tk.TclError:
+            print("Ícone 'assets/icon.ico' não encontrado.")
+
+        # Fontes
+        self.title_font = ("Garamond", 24, "bold")
+        self.category_font = ("Garamond", 18, "bold", "italic")
+        self.normal_font = ("Segoe UI", 13)
+        self.tracker_font = ("Courier New", 16, "bold")
+
+        # --- ESTRUTURA PRINCIPAL ---
+        self.scrollable_frame = ctk.CTkScrollableFrame(self, label_text="Criador de Personagem", label_font=self.title_font)
+        self.scrollable_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # --- SEÇÕES DA PÁGINA ---
+        self._create_basic_info_section()
+        ctk.CTkFrame(self.scrollable_frame, height=2, fg_color="gray30").pack(fill='x', padx=20, pady=20)
+        self._create_status_trackers_section()
+        ctk.CTkFrame(self.scrollable_frame, height=2, fg_color="gray30").pack(fill='x', padx=20, pady=20)
+        self._create_attributes_section()
+        ctk.CTkFrame(self.scrollable_frame, height=2, fg_color="gray30").pack(fill='x', padx=20, pady=20)
+        self._create_skills_section()
+        ctk.CTkFrame(self.scrollable_frame, height=2, fg_color="gray30").pack(fill='x', padx=20, pady=20)
+        self._create_final_sheet_section()
+        
+        # Inicializa os medidores com um valor padrão
+        self._update_tracker_size("health", 5) # Vigor 2 (padrão) + 3 = 5
+        self._update_tracker_size("willpower", 2) # Compostura 1 + Determinação 1 = 2
+
+    def _create_basic_info_section(self):
+        header_frame = ctk.CTkFrame(self.scrollable_frame, fg_color="#1A1A1A", corner_radius=0)
+        header_frame.pack(fill="x", padx=0, pady=(0, 20))
+        ctk.CTkLabel(header_frame, text="VAMPIRE: THE MASQUERADE", font=("Garamond", 28, "bold"), text_color="#9A0000").pack(pady=(10, 0))
+        ctk.CTkFrame(header_frame, height=2, fg_color="#9A0000").pack(fill="x", padx=50, pady=5)
+        info_grid = ctk.CTkFrame(header_frame, fg_color="transparent")
+        info_grid.pack(pady=(0, 15), fill="x", padx=20)
+        info_grid.grid_columnconfigure((0, 1, 2), weight=1)
+        left_col = ctk.CTkFrame(info_grid, fg_color="transparent"); mid_col = ctk.CTkFrame(info_grid, fg_color="transparent"); right_col = ctk.CTkFrame(info_grid, fg_color="transparent")
+        left_col.grid(row=0, column=0, sticky="nsew", padx=10); mid_col.grid(row=0, column=1, sticky="nsew", padx=10); right_col.grid(row=0, column=2, sticky="nsew", padx=10)
+        left_fields = [("Nome do Personagem", "name_entry", 200), ("Crônica", "chronicle_entry", 200), ("Senhor", "sire_entry", 200)]
+        mid_fields = [("Conceito", "concept_entry", 200), ("Ambição", "ambition_entry", 200), ("Desejo", "desire_entry", 200)]
+        right_fields = [("Predador", "predator_entry", 200), ("Clã", "clan_menu", 200, self.clan_list), ("Jogador", "player_entry", 200)]
+        def populate_column(column_frame, fields_list):
+            for i, (label, var_name, width, *options) in enumerate(fields_list):
+                field_frame = ctk.CTkFrame(column_frame, fg_color="transparent"); field_frame.pack(fill="x", pady=5)
+                ctk.CTkLabel(field_frame, text=label + ":", font=self.normal_font).pack(anchor="w")
+                if var_name.endswith("_entry"):
+                    entry = ctk.CTkEntry(field_frame, width=width, font=self.normal_font, border_color="#9A0000"); entry.pack(fill="x")
+                    setattr(self, var_name, entry)
+                elif var_name.endswith("_menu"):
+                    var = tk.StringVar()
+                    menu = ctk.CTkOptionMenu(field_frame, variable=var, values=options[0] if options else [], width=width, dropdown_fg_color="#1A1A1A", button_color="#9A0000", font=self.normal_font); menu.pack(fill="x")
+                    setattr(self, var_name.replace("_menu", "_var"), var)
+                    if options and options[0]: var.set(options[0][0])
+        populate_column(left_col, left_fields); populate_column(mid_col, mid_fields); populate_column(right_col, right_fields)
+    
+    def _create_status_trackers_section(self):
+        trackers_main_frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
+        trackers_main_frame.pack(fill="x", padx=20, pady=10)
+        ctk.CTkLabel(trackers_main_frame, text="Medidores de Status", font=self.category_font).pack()
+        health_frame = ctk.CTkFrame(trackers_main_frame); health_frame.pack(pady=10)
+        ctk.CTkLabel(health_frame, text="Vitalidade", font=self.normal_font).pack(pady=5)
+        self.health_tracker_container = ctk.CTkFrame(health_frame, fg_color="transparent"); self.health_tracker_container.pack(pady=5)
+        willpower_frame = ctk.CTkFrame(trackers_main_frame); willpower_frame.pack(pady=10)
+        ctk.CTkLabel(willpower_frame, text="Força de Vontade", font=self.normal_font).pack(pady=5)
+        self.willpower_tracker_container = ctk.CTkFrame(willpower_frame, fg_color="transparent"); self.willpower_tracker_container.pack(pady=5)
+
+    def _create_attributes_section(self):
+        attr_frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
+        attr_frame.pack(fill="x", expand=True, padx=20, pady=10)
+        self._populate_attribute_frame(attr_frame)
+
+    def _create_skills_section(self):
+        skills_frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
+        skills_frame.pack(fill="x", expand=True, padx=20, pady=10)
+        self._populate_skill_frame(skills_frame)
+        
+    def _create_final_sheet_section(self):
+        final_frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
+        final_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        create_button = ctk.CTkButton(final_frame, text="Gerar Ficha e Escolher Especialidades", command=self.generate_sheet, font=self.normal_font)
+        create_button.pack(pady=(10, 15))
+        self.output_text = ctk.CTkTextbox(final_frame, font=("Courier New", 12), height=400, activate_scrollbars=True)
+        self.output_text.pack(fill="both", expand=True); self.output_text.configure(state="disabled")
+
+    def _create_tracker_row(self, container, tracker_type, size):
+        states_list = getattr(self, f"{tracker_type}_tracker_states")
+        buttons_list = getattr(self, f"{tracker_type}_tracker_buttons")
+        for i in range(size):
+            button = ctk.CTkButton(container, text="", width=35, height=35, font=self.tracker_font, fg_color="#343638", border_width=2, border_color="gray50", hover_color="gray25", command=lambda t=tracker_type, idx=i: self._on_tracker_click(t, idx))
+            button.grid(row=0, column=i, padx=3)
+            buttons_list.append(button); states_list.append(0)
+
+    def _on_tracker_click(self, tracker_type, index):
+        states_list = getattr(self, f"{tracker_type}_tracker_states"); buttons_list = getattr(self, f"{tracker_type}_tracker_buttons")
+        states_list[index] = (states_list[index] + 1) % 3
+        new_state = states_list[index]; button_to_update = buttons_list[index]
+        if new_state == 0: button_to_update.configure(text="", text_color="white")
+        elif new_state == 1: button_to_update.configure(text="/", text_color="white")
+        elif new_state == 2: button_to_update.configure(text="X", text_color="#FF4040")
+
+    def _update_tracker_size(self, tracker_type, new_size):
+        container = getattr(self, f"{tracker_type}_tracker_container"); buttons_list = getattr(self, f"{tracker_type}_tracker_buttons"); states_list = getattr(self, f"{tracker_type}_tracker_states")
+        for widget in container.winfo_children(): widget.destroy()
+        buttons_list.clear(); states_list.clear()
+        self._create_tracker_row(container, tracker_type, new_size)
+    
+    def _populate_attribute_frame(self, parent_frame):
+        header_frame = ctk.CTkFrame(parent_frame, fg_color="transparent"); header_frame.pack(fill="x", pady=5)
+        self.attribute_instruction_label = ctk.CTkLabel(header_frame, text="Passo 1: Escolha seu Atributo Primário (4 pontos)", font=self.category_font); self.attribute_instruction_label.pack(side="left", padx=10)
+        button_frame = ctk.CTkFrame(header_frame, fg_color="transparent"); button_frame.pack(side="right")
+        reset_button = ctk.CTkButton(button_frame, text="Resetar", command=self.reset_attributes, width=80); reset_button.pack(side="right", padx=5)
+        self.confirm_attr_button = ctk.CTkButton(button_frame, text="Confirmar Passo", command=self.confirm_attribute_step, width=120); self.confirm_attr_button.pack(side="right")
+        content_frame = ctk.CTkFrame(parent_frame, fg_color="transparent"); content_frame.pack(fill="both", expand=True, pady=10)
+        phys_frame = ctk.CTkFrame(content_frame); phys_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=5)
+        soc_frame = ctk.CTkFrame(content_frame); soc_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=5)
+        ment_frame = ctk.CTkFrame(content_frame); ment_frame.grid(row=0, column=2, sticky="nsew", padx=10, pady=5)
+        content_frame.grid_columnconfigure((0,1,2), weight=1)
+        frames_by_cat = {"Físico": phys_frame, "Social": soc_frame, "Mental": ment_frame}
+        for category, stats in self.attributes_data.items():
+            parent = frames_by_cat[category]; ctk.CTkLabel(parent, text=category, font=self.normal_font).pack(pady=(10,5))
+            for stat in stats: self._create_attribute_row(parent, stat)
             
-            self.sheet_window = CharacterSheet(self, self.character, self.clans_data, self.attributes_data, self.skills_data)
-            self.sheet_window.focus()
-        else:
-            self.sheet_window.focus()
-
-    def load_character(self):
-        file_path = filedialog.askopenfilename(
-            filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")]
-        )
-        if not file_path:
+    def _populate_skill_frame(self, parent_frame):
+        header_frame = ctk.CTkFrame(parent_frame, fg_color="transparent"); header_frame.pack(fill="x", pady=5)
+        self.skill_instruction_label = ctk.CTkLabel(header_frame, text="Passo 1: Escolha 3 Perícias (3 pontos)", font=self.category_font); self.skill_instruction_label.pack(side="left", padx=10)
+        button_frame = ctk.CTkFrame(header_frame, fg_color="transparent"); button_frame.pack(side="right")
+        reset_button = ctk.CTkButton(button_frame, text="Resetar", command=self.reset_skills, width=80); reset_button.pack(side="right", padx=5)
+        self.confirm_skill_button = ctk.CTkButton(button_frame, text="Confirmar Passo", command=self.confirm_skill_step, width=120); self.confirm_skill_button.pack(side="right")
+        content_frame = ctk.CTkFrame(parent_frame, fg_color="transparent"); content_frame.pack(fill="both", expand=True, pady=10)
+        tal_frame = ctk.CTkFrame(content_frame); tal_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=5)
+        per_frame = ctk.CTkFrame(content_frame); per_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=5)
+        con_frame = ctk.CTkFrame(content_frame); con_frame.grid(row=0, column=2, sticky="nsew", padx=10, pady=5)
+        content_frame.grid_columnconfigure((0,1,2), weight=1)
+        frames_by_cat = {"Talentos": tal_frame, "Perícias": per_frame, "Conhecimentos": con_frame}
+        for category, skills in self.skills_data.items():
+            parent = frames_by_cat[category]; ctk.CTkLabel(parent, text=category, font=self.normal_font).pack(pady=(10,5))
+            for skill in skills: var = tk.BooleanVar(); self._create_skill_row(parent, skill, var, command=self._update_skill_locks); self.selected_skills_by_value[3][skill] = var
+    
+    def _create_attribute_row(self, parent, stat_name):
+        row_frame = ctk.CTkFrame(parent, fg_color="transparent"); row_frame.pack(fill="x", padx=15, pady=4)
+        selector = ctk.CTkRadioButton(row_frame, text=stat_name, variable=self.selected_primary_attr, value=stat_name, font=self.normal_font, fg_color=("#9A0000", "#700000"), border_color="#500000", hover_color="#B50000"); selector.pack(side="left")
+        value_label = ctk.CTkLabel(row_frame, text="1", font=self.normal_font, width=30); value_label.pack(side="right", padx=10)
+        self.attribute_widgets[stat_name] = {'frame': row_frame, 'selector': selector, 'value_label': value_label}
+        
+    def _create_skill_row(self, parent, skill_name, var, command):
+        row_frame = ctk.CTkFrame(parent, fg_color="transparent"); row_frame.pack(fill="x", padx=15, pady=4)
+        selector = ctk.CTkCheckBox(row_frame, text=skill_name, variable=var, font=self.normal_font, command=command); selector.pack(side="left")
+        value_label = ctk.CTkLabel(row_frame, text="0", font=self.normal_font, width=30); value_label.pack(side="right", padx=10)
+        self.skill_widgets[skill_name] = {'selector': selector, 'value_label': value_label, 'var': var}
+        
+    def _update_attribute_locks(self):
+        if self.attribute_selection_stage == 3: limit, selectable_attrs = 3, self.selected_secondary_attrs
+        elif self.attribute_selection_stage == 2: limit, selectable_attrs = 4, self.selected_tertiary_attrs
+        else: return
+        chosen_count = sum(1 for var in selectable_attrs.values() if var.get());
+        for stat, var in selectable_attrs.items():
+            if not var.get(): self.attribute_widgets[stat]['selector'].configure(state="normal" if chosen_count < limit else "disabled")
+            
+    # --- FUNÇÃO PRINCIPAL MODIFICADA ---
+    def confirm_attribute_step(self):
+        if self.attribute_selection_stage == 4:
+            primary = self.selected_primary_attr.get()
+            if not primary or primary == 'None': messagebox.showerror("Seleção Incompleta", "Você deve selecionar um Atributo Primário."); return
+            self.character.attributes[primary] = 4; self.attribute_widgets[primary]['value_label'].configure(text="4"); self.attribute_widgets[primary]['selector'].configure(state="disabled")
+            self.attribute_selection_stage = 3
+            self.attribute_instruction_label.configure(text="Passo 2: Escolha 3 Atributos Secundários (3 pontos)")
+            for stat, widgets in self.attribute_widgets.items():
+                if stat != primary:
+                    var = tk.BooleanVar(); widgets['selector'].destroy()
+                    new_selector = ctk.CTkCheckBox(widgets['frame'], text=stat, variable=var, command=self._update_attribute_locks, font=self.normal_font)
+                    new_selector.pack(side="left")
+                    widgets['selector'] = new_selector; self.selected_secondary_attrs[stat] = var
             return
 
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            self.open_sheet(char_data=data)
-        except Exception as e:
-            messagebox.showerror("Erro ao Carregar", f"Não foi possível carregar o personagem.\n\n{e}")
+        if self.attribute_selection_stage == 3:
+            chosen_secondaries = [stat for stat, var in self.selected_secondary_attrs.items() if var.get()]
+            if len(chosen_secondaries) != 3: messagebox.showerror("Seleção Inválida", "Você deve escolher exatamente 3 Atributos Secundários."); return
+            for stat in chosen_secondaries: self.character.attributes[stat] = 3; self.attribute_widgets[stat]['value_label'].configure(text="3"); self.attribute_widgets[stat]['selector'].configure(state="disabled")
+            self.attribute_selection_stage = 2
+            self.attribute_instruction_label.configure(text="Passo 3: Escolha 4 Atributos Terciários (2 pontos)")
+            remaining_stats = self.selected_secondary_attrs.keys() - set(chosen_secondaries)
+            for stat in remaining_stats:
+                widgets = self.attribute_widgets[stat]; var = tk.BooleanVar(); widgets['selector'].destroy()
+                new_selector = ctk.CTkCheckBox(widgets['frame'], text=stat, variable=var, command=self._update_attribute_locks, font=self.normal_font)
+                new_selector.pack(side="left")
+                widgets['selector'] = new_selector; self.selected_tertiary_attrs[stat] = var
+            self._update_attribute_locks()
+            return
+            
+        if self.attribute_selection_stage == 2:
+            chosen_tertiaries = [stat for stat, var in self.selected_tertiary_attrs.items() if var.get()]
+            if len(chosen_tertiaries) != 4: messagebox.showerror("Seleção Inválida", "Você deve escolher exatamente 4 Atributos Terciários."); return
+            for stat in chosen_tertiaries: self.character.attributes[stat] = 2; self.attribute_widgets[stat]['value_label'].configure(text="2"); self.attribute_widgets[stat]['selector'].configure(state="disabled")
+            self.attribute_selection_stage = 0
+            self.attribute_instruction_label.configure(text="Atributos Distribuídos!"); self.confirm_attr_button.configure(state="disabled")
+            for stat in self.selected_tertiary_attrs.keys() - set(chosen_tertiaries): self.attribute_widgets[stat]['selector'].configure(state="disabled")
+            
+            # --- PARTE NOVA: CÁLCULO E ATUALIZAÇÃO DOS MEDIDORES ---
+            # Após a distribuição final, pegamos os valores e atualizamos os medidores
+            stamina = self.character.attributes.get("Vigor", 1)
+            composure = self.character.attributes.get("Compostura", 1)
+            resolve = self.character.attributes.get("Determinação", 1)
+            
+            self._update_tracker_size("health", stamina + 3)
+            self._update_tracker_size("willpower", composure + resolve)
+            # --------------------------------------------------------
+            return
+
+    # --- FUNÇÃO DE RESET MODIFICADA ---
+    def reset_attributes(self):
+        self.character.initialize_stats(self.attributes_data, self.skills_data)
+        self.attribute_selection_stage = 4
+        self.selected_primary_attr.set(None)
+        self.selected_secondary_attrs.clear()
+        self.selected_tertiary_attrs.clear()
+        self.attribute_instruction_label.configure(text="Passo 1: Escolha seu Atributo Primário (4 pontos)")
+        self.confirm_attr_button.configure(state="normal")
+        for stat, widgets in self.attribute_widgets.items():
+            widgets['value_label'].configure(text="1")
+            widgets['selector'].destroy()
+            new_selector = ctk.CTkRadioButton(widgets['frame'], text=stat, variable=self.selected_primary_attr, value=stat, font=self.normal_font, fg_color=("#9A0000", "#700000"), border_color="#500000", hover_color="#B50000")
+            new_selector.pack(side="left")
+            widgets['selector'] = new_selector
+        
+        # Reseta os medidores para o tamanho padrão também
+        self._update_tracker_size("health", 5)
+        self._update_tracker_size("willpower", 2)
+
+    # ... (O resto do código permanece o mesmo)
+    def _update_skill_locks(self):
+        limits = {3: 3, 2: 5, 1: 7}; stage = self.skill_selection_stage
+        if stage not in limits: return
+        limit, selectable_skills = limits[stage], self.selected_skills_by_value[stage]
+        chosen_count = sum(1 for var in selectable_skills.values() if var.get())
+        for skill, var in selectable_skills.items():
+            if not var.get(): self.skill_widgets[skill]['selector'].configure(state="normal" if chosen_count < limit else "disabled")
+            
+    def confirm_skill_step(self):
+        stage = self.skill_selection_stage; limits = {3: 3, 2: 5, 1: 7}
+        if stage not in limits: return
+        chosen = [skill for skill, var in self.selected_skills_by_value[stage].items() if var.get()]
+        if len(chosen) != limits[stage]: messagebox.showerror("Seleção Inválida", f"Você deve escolher exatamente {limits[stage]} Perícias."); return
+        for skill in chosen: self.character.skills[skill] = stage; self.skill_widgets[skill]['value_label'].configure(text=str(stage)); self.skill_widgets[skill]['selector'].configure(state="disabled")
+        next_stage = stage - 1; self.skill_selection_stage = next_stage
+        if next_stage > 0:
+            self.skill_instruction_label.configure(text=f"Passo {4-next_stage}: Escolha {limits[next_stage]} Perícias ({next_stage} pontos)")
+            remaining_skills = self.selected_skills_by_value[stage].keys() - set(chosen)
+            for skill in remaining_skills: self.selected_skills_by_value[next_stage][skill] = self.skill_widgets[skill]['var']
+            self.selected_skills_by_value[stage].clear(); self._update_skill_locks()
+        else:
+            self.skill_instruction_label.configure(text="Perícias Distribuídas!"); self.confirm_skill_button.configure(state="disabled")
+            remaining_skills = self.selected_skills_by_value[stage].keys() - set(chosen)
+            for skill in remaining_skills: self.skill_widgets[skill]['selector'].configure(state="disabled")
+            self.selected_skills_by_value[stage].clear()
+            
+    def reset_skills(self):
+        self.character.initialize_stats(self.attributes_data, self.skills_data)
+        self.skill_selection_stage = 3; self.selected_skills_by_value = {3: {}, 2: {}, 1: {}}
+        self.skill_instruction_label.configure(text="Passo 1: Escolha 3 Perícias (3 pontos)"); self.confirm_skill_button.configure(state="normal")
+        for skill, widgets in self.skill_widgets.items():
+            widgets['value_label'].configure(text="0"); widgets['selector'].configure(state="normal")
+            widgets['var'].set(False); self.selected_skills_by_value[3][skill] = widgets['var']
+        self._update_skill_locks()
+        
+    def generate_sheet(self):
+        if self.attribute_selection_stage != 0 or self.skill_selection_stage != 0: messagebox.showwarning("Criação Incompleta", "Finalize Atributos e Perícias."); return
+        self.character.name = self.name_entry.get()
+        if not self.character.name: messagebox.showerror("Erro", "Personagem precisa de um nome."); return
+        self.character.specialties.clear()
+        self.character.set_clan(self.clan_menu_var.get(), self.clans_data)
+        self._update_output_text(); self._open_specialty_window()
+        
+    def _open_specialty_window(self):
+        eligible_skills = sorted([s for s, v in self.character.skills.items() if v > 0])
+        if not eligible_skills: return
+        mandatory_skills_with_dots = [s for s in eligible_skills if s in self.MANDATORY_SPECIALTY_SKILLS]
+        free_choice_skills = [s for s in eligible_skills if s not in self.MANDATORY_SPECIALTY_SKILLS]
+        popup = ctk.CTkToplevel(self) 
+        popup.title("Escolher Especialidades"); popup.geometry("500x400"); popup.resizable(False, False); popup.transient(self); popup.grab_set()
+        main_frame = ctk.CTkFrame(popup, fg_color="transparent", corner_radius=0); main_frame.pack(fill="both", expand=True, padx=15, pady=15)
+        entry_widgets = {}
+        if mandatory_skills_with_dots:
+            mandatory_frame = ctk.CTkFrame(main_frame); mandatory_frame.pack(fill="x", pady=(0, 15))
+            ctk.CTkLabel(mandatory_frame, text="Especialidades Obrigatórias", font=(self.normal_font[0], 15, "bold")).pack(pady=10)
+            for skill in mandatory_skills_with_dots:
+                f = ctk.CTkFrame(mandatory_frame, fg_color="transparent"); f.pack(fill="x", padx=10, pady=5)
+                ctk.CTkLabel(f, text=f"{skill}:", font=self.normal_font).pack(side="left")
+                entry = ctk.CTkEntry(f, font=self.normal_font, width=250); entry.pack(side="right", fill="x", expand=True)
+                entry_widgets[skill] = entry
+        free_frame = ctk.CTkFrame(main_frame); free_frame.pack(fill="x")
+        ctk.CTkLabel(free_frame, text="Especialidade Gratuita (1)", font=(self.normal_font[0], 15, "bold")).pack(pady=10)
+        selected_free_skill = tk.StringVar(self); free_specialty_entry = ctk.CTkEntry(free_frame, font=self.normal_font, placeholder_text="Ex: Facas, Poesia...", width=250)
+        if free_choice_skills:
+            f = ctk.CTkFrame(free_frame, fg_color="transparent"); f.pack(fill="x", padx=10, pady=5)
+            skill_menu = ctk.CTkOptionMenu(f, variable=selected_free_skill, values=free_choice_skills, font=self.normal_font); skill_menu.pack(side="left", padx=(0,10))
+            free_specialty_entry.pack(side="right", fill="x", expand=True)
+        else: ctk.CTkLabel(free_frame, text="Nenhuma outra perícia disponível.").pack()
+        confirm_button = ctk.CTkButton(main_frame, text="Confirmar e Finalizar", command=lambda: self._confirm_specialty(entry_widgets, selected_free_skill, free_specialty_entry, popup))
+        confirm_button.pack(pady=20)
+        
+    def _confirm_specialty(self, mandatory_entries, free_skill_var, free_entry_widget, popup):
+        for skill, entry_widget in mandatory_entries.items():
+            specialty_text = entry_widget.get().strip()
+            if not specialty_text: messagebox.showerror("Erro", f"A perícia '{skill}' precisa de uma especialidade.", parent=popup); return
+            self.character.add_specialty(skill, specialty_text)
+        free_specialty_text = free_entry_widget.get().strip()
+        if free_specialty_text:
+            free_skill = free_skill_var.get()
+            if free_skill: self.character.add_specialty(free_skill, free_specialty_text)
+        popup.destroy(); self._update_output_text()
+        
+    def _update_output_text(self):
+        char = self.character; result = f"--- FICHA DE PERSONAGEM: {char.name.upper()} ---\n"; result += f"CLÃ: {char.clan}\n\n"
+        result += "--- ATRIBUTOS ---\n"
+        for cat, stats in self.attributes_data.items(): result += f"{cat.upper()}: " + ", ".join([f"{s} {char.attributes[s]}" for s in stats]) + "\n"
+        result += "\n--- PERÍCIAS ---\n"
+        for cat, stats in self.skills_data.items():
+            skill_lines = []
+            for s in stats:
+                if char.skills.get(s, 0) > 0:
+                    specialty_str = f" ({', '.join(char.specialties[s])})" if s in char.specialties else ""
+                    skill_lines.append(f"{s} {char.skills[s]}{specialty_str}")
+            if skill_lines: result += f"{cat.upper()}: " + ", ".join(skill_lines) + "\n"
+        self.output_text.configure(state="normal"); self.output_text.delete("1.0", tk.END); self.output_text.insert("1.0", result); self.output_text.configure(state="disabled")
+
 if __name__ == "__main__":
     app = App()
     app.mainloop()
