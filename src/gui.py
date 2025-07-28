@@ -269,10 +269,11 @@ class App(ctk.CTk):
         self.disciplines_container.pack(fill="x", expand=True)
 
         # Botão para confirmar a escolha do clã e mostrar as disciplinas
+        # GARANTINDO QUE O COMANDO ESTÁ CORRETO
         confirm_clan_button = ctk.CTkButton(
             parent_frame,
             text="Confirmar Clã e Ver Disciplinas",
-            command=self._update_disciplines_display
+            command=self._update_disciplines_display  # A correção crucial está aqui
         )
         confirm_clan_button.pack(pady=10)
 
@@ -283,24 +284,25 @@ class App(ctk.CTk):
             widget.destroy()
         self.discipline_widgets.clear()
         
-        # Pega o clã selecionado no menu da seção de informações básicas
+        # --- CORREÇÃO AQUI ---
+        # Trocamos 'self.clan_menu_var' para 'self.clan_var', que é o nome correto.
         try:
-            selected_clan_name = self.clan_menu_var.get()
+            selected_clan_name = self.clan_var.get()
         except AttributeError:
             messagebox.showerror("Erro", "Por favor, selecione um clã primeiro na seção de Informações Básicas.")
             return
 
         if not selected_clan_name or selected_clan_name not in self.clans_data:
-            return # Não faz nada se nenhum clã válido for selecionado
+            # Adiciona uma mensagem para o usuário saber o que fazer
+            ctk.CTkLabel(self.disciplines_container, text="Selecione um clã acima e clique em 'Confirmar' para ver as disciplinas.").pack()
+            return
 
         clan_disciplines = self.clans_data[selected_clan_name]["disciplines"]
         
-        # Garante que temos exatamente duas disciplinas
         if len(clan_disciplines) != 2:
             ctk.CTkLabel(self.disciplines_container, text=f"Erro de dados: o clã {selected_clan_name} não tem 2 disciplinas.").pack()
             return
 
-        # Define a variável do RadioButton para a primeira disciplina por padrão
         self.selected_discipline_for_2_dots.set(clan_disciplines[0])
 
         for discipline_name in clan_disciplines:
@@ -316,9 +318,8 @@ class App(ctk.CTk):
             )
             selector.pack(side="left")
             
-            # Guardamos para referência futura, se necessário
             self.discipline_widgets[discipline_name] = selector
-
+        
     def _create_attribute_row(self, parent, stat_name):
         row_frame = ctk.CTkFrame(parent, fg_color="transparent"); row_frame.pack(fill="x", padx=15, pady=4)
         selector = ctk.CTkRadioButton(row_frame, text=stat_name, variable=self.selected_primary_attr, value=stat_name, font=self.normal_font, fg_color=("#9A0000", "#700000"), border_color="#500000", hover_color="#B50000"); selector.pack(side="left")
@@ -446,23 +447,37 @@ class App(ctk.CTk):
         self._update_skill_locks()
         
     def generate_sheet(self):
-        if self.attribute_selection_stage != 0 or self.skill_selection_stage != 0: messagebox.showwarning("Criação Incompleta", "Finalize Atributos e Perícias."); return
+        if self.attribute_selection_stage != 0 or self.skill_selection_stage != 0:
+            messagebox.showwarning("Criação Incompleta", "Finalize Atributos e Perícias.")
+            return
+            
         self.character.name = self.name_entry.get()
-        if not self.character.name: messagebox.showerror("Erro", "Personagem precisa de um nome."); return
-        self.character.specialties.clear()
-        self.character.set_clan(self.clan_menu_var.get(), self.clans_data)
-        self._update_output_text(); self._open_specialty_window()
-        self.character.disciplines.clear()
+        if not self.character.name:
+            messagebox.showerror("Erro", "Personagem precisa de um nome.")
+            return
+            
+        # --- CORREÇÃO AQUI ---
+        # Trocamos 'self.clan_menu_var' para 'self.clan_var'
+        selected_clan = self.clan_var.get()
+        self.character.set_clan(selected_clan, self.clans_data)
+
         disc_with_2_dots = self.selected_discipline_for_2_dots.get()
-        if not disc_with_2_dots:
-             messagebox.showerror("Erro", "Por favor, selecione qual Disciplina receberá 2 pontos.")
-             return
+        if not disc_with_2_dots or disc_with_2_dots == "None":
+            messagebox.showerror("Erro de Disciplina", "Clique em 'Confirmar Clã' e selecione a Disciplina de 2 pontos.")
+            return
+
+        self.character.disciplines.clear()
         self.character.disciplines[disc_with_2_dots] = 2
-        clan_disciplines = self.clans_data[self.clan_menu_var.get()]["disciplines"]
+        clan_disciplines = self.clans_data[selected_clan]["disciplines"]
         other_disc = [d for d in clan_disciplines if d != disc_with_2_dots][0]
         self.character.disciplines[other_disc] = 1
+
+        self.character.specialties.clear()
         
-        
+        self._update_output_text()
+        self._open_specialty_window()
+
+
     def _open_specialty_window(self):
         eligible_skills = sorted([s for s, v in self.character.skills.items() if v > 0])
         if not eligible_skills: return
@@ -503,9 +518,14 @@ class App(ctk.CTk):
         popup.destroy(); self._update_output_text()
         
     def _update_output_text(self):
-        char = self.character; result = f"--- FICHA DE PERSONAGEM: {char.name.upper()} ---\n"; result += f"CLÃ: {char.clan}\n\n"
+        char = self.character
+        result = f"--- FICHA DE PERSONAGEM: {char.name.upper()} ---\n"
+        result += f"CLÃ: {char.clan}\n\n"
+        
         result += "--- ATRIBUTOS ---\n"
-        for cat, stats in self.attributes_data.items(): result += f"{cat.upper()}: " + ", ".join([f"{s} {char.attributes[s]}" for s in stats]) + "\n"
+        for cat, stats in self.attributes_data.items():
+            result += f"{cat.upper()}: " + ", ".join([f"{s} {char.attributes[s]}" for s in stats]) + "\n"
+        
         result += "\n--- PERÍCIAS ---\n"
         for cat, stats in self.skills_data.items():
             skill_lines = []
@@ -513,8 +533,21 @@ class App(ctk.CTk):
                 if char.skills.get(s, 0) > 0:
                     specialty_str = f" ({', '.join(char.specialties[s])})" if s in char.specialties else ""
                     skill_lines.append(f"{s} {char.skills[s]}{specialty_str}")
-            if skill_lines: result += f"{cat.upper()}: " + ", ".join(skill_lines) + "\n"
-        self.output_text.configure(state="normal"); self.output_text.delete("1.0", tk.END); self.output_text.insert("1.0", result); self.output_text.configure(state="disabled")
+            if skill_lines:
+                result += f"{cat.upper()}: " + ", ".join(skill_lines) + "\n"
+                
+        # --- NOVO BLOCO PARA MOSTRAR DISCIPLINAS ---
+        if char.disciplines:
+            result += "\n--- DISCIPLINAS ---\n"
+            disciplines_str = ", ".join([f"{name} {level}" for name, level in sorted(char.disciplines.items())])
+            result += disciplines_str + "\n"
+
+        # Atualiza o campo de texto
+        self.output_text.configure(state="normal")
+        self.output_text.delete("1.0", tk.END)
+        self.output_text.insert("1.0", result)
+        self.output_text.configure(state="disabled")
+
 
 if __name__ == "__main__":
     app = App()
