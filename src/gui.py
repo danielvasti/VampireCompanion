@@ -73,20 +73,88 @@ class App(ctk.CTk):
         self._create_final_sheet_section()
 
     def _create_basic_info_section(self):
-        info_frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
-        info_frame.pack(fill="x", padx=20, pady=10)
-        
-        ctk.CTkLabel(info_frame, text="Nome:", font=self.normal_font).grid(row=0, column=0, sticky="w", padx=5, pady=5)
-        self.name_entry = ctk.CTkEntry(info_frame, font=self.normal_font, width=300)
-        self.name_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
-        
-        ctk.CTkLabel(info_frame, text="Clã:", font=self.normal_font).grid(row=1, column=0, sticky="w", padx=5, pady=5)
-        self.selected_clan = tk.StringVar(self)
-        if self.clan_list: self.selected_clan.set(self.clan_list[0])
-        clan_menu = ctk.CTkOptionMenu(info_frame, variable=self.selected_clan, values=self.clan_list, font=self.normal_font)
-        clan_menu.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
-        info_frame.grid_columnconfigure(1, weight=1)
+        header_frame = ctk.CTkFrame(self.scrollable_frame, fg_color="#1A1A1A", corner_radius=0)
+        header_frame.pack(fill="x", padx=0, pady=(0, 20))
 
+        # Título principal (mantido como está)
+        ctk.CTkLabel(
+            header_frame, 
+            text="VAMPIRE: THE MASQUERADE", 
+            font=("Garamond", 28, "bold"), 
+            text_color="#9A0000"
+        ).pack(pady=(10, 0))
+
+        # Linha divisória (mantida como está)
+        ctk.CTkFrame(header_frame, height=2, fg_color="#9A0000").pack(fill="x", padx=50, pady=5)
+
+        # --- NOVA ESTRUTURA DE 3 COLUNAS ---
+        # 1. Criamos um frame principal para o grid
+        info_grid = ctk.CTkFrame(header_frame, fg_color="transparent")
+        info_grid.pack(pady=(0, 15), fill="x", padx=20)
+        info_grid.grid_columnconfigure((0, 1, 2), weight=1) # Faz as 3 colunas terem o mesmo tamanho
+
+        # 2. Criamos um frame para cada coluna
+        left_col = ctk.CTkFrame(info_grid, fg_color="transparent")
+        mid_col = ctk.CTkFrame(info_grid, fg_color="transparent")
+        right_col = ctk.CTkFrame(info_grid, fg_color="transparent")
+
+        left_col.grid(row=0, column=0, sticky="nsew", padx=10)
+        mid_col.grid(row=0, column=1, sticky="nsew", padx=10)
+        right_col.grid(row=0, column=2, sticky="nsew", padx=10)
+
+        # 3. Definimos os campos para cada coluna separadamente
+        left_fields = [
+            ("Nome do Personagem", "name_entry", 200),
+            ("Crônica", "chronicle_entry", 200),
+            ("Senhor", "sire_entry", 200),
+        ]
+
+        mid_fields = [
+            ("Conceito", "concept_entry", 200),
+            ("Ambição", "ambition_entry", 200),
+            ("Desejo", "desire_entry", 200),
+        ]
+
+        right_fields = [
+            ("Predador", "predator_entry", 200),
+            ("Clã", "clan_menu", 200, self.clan_list),
+            ("Jogador", "player_entry", 200)
+        ]
+
+        # 4. Função auxiliar para criar os widgets e evitar repetição de código
+        def populate_column(column_frame, fields_list):
+            for i, (label, var_name, width, *options) in enumerate(fields_list):
+                field_frame = ctk.CTkFrame(column_frame, fg_color="transparent")
+                field_frame.pack(fill="x", pady=5)
+                
+                ctk.CTkLabel(field_frame, text=label + ":", font=self.normal_font).pack(anchor="w")
+
+                if var_name.endswith("_entry"):
+                    entry = ctk.CTkEntry(field_frame, width=width, font=self.normal_font, border_color="#9A0000")
+                    entry.pack(fill="x")
+                    # Usamos setattr para criar a variável de instância dinamicamente (ex: self.name_entry)
+                    setattr(self, var_name, entry)
+                
+                elif var_name.endswith("_menu"):
+                    var = tk.StringVar()
+                    menu = ctk.CTkOptionMenu(
+                        field_frame, 
+                        variable=var, 
+                        values=options[0] if options else [],
+                        width=width,
+                        dropdown_fg_color="#1A1A1A",
+                        button_color="#9A0000",
+                        font=self.normal_font
+                    )
+                    menu.pack(fill="x")
+                    setattr(self, var_name.replace("_menu", "_var"), var)
+                    if options and options[0]:
+                        var.set(options[0][0])
+
+        # 5. Populamos cada coluna com sua respectiva lista de campos
+        populate_column(left_col, left_fields)
+        populate_column(mid_col, mid_fields)
+        populate_column(right_col, right_fields)
     def _create_attributes_section(self):
         attr_frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
         attr_frame.pack(fill="x", expand=True, padx=20, pady=10)
